@@ -1,13 +1,16 @@
 package tasks;
 
 import common.Person;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -21,69 +24,56 @@ P.P.S Здесь ваши правки необходимо прокоммент
  */
 public class Task9 {
 
-  private long count;
+  // Удалено поле count, т.к. оно не нужно для подсчета четных чисел используем метод count()
+  // Конвертируем начиная со второго элемента списка
 
-  // Костыль, эластик всегда выдает в топе "фальшивую персону".
-  // Конвертируем начиная со второй
+  // Вместо удаления элемента мы пропускаем элемент стриме. Это сохраняет исходный список неизменным и более эффективно.
+  // Удалил проверку на пустой список - тк если на входе пустой список по стрим вернёт пустой список + в данной проверке возвращается иммутабельный список,
+  //  а я предполагаю что с ним продолжится работа
   public List<String> getNames(List<Person> persons) {
-    if (persons.size() == 0) {
-      return Collections.emptyList();
-    }
-    persons.remove(0);
-    return persons.stream().map(Person::firstName).collect(Collectors.toList());
+    return persons.stream()
+            .skip(1)
+            .map(Person::firstName)
+            .collect(Collectors.toList());
   }
 
-  // Зачем-то нужны различные имена этих же персон (без учета фальшивой разумеется)
+  // Получаем уникальные имена персон без учета первого элемента
+  // На выходе должен быть Сет, дистинкт не нужен - делаем LinkedHashSet (+ сохраним порядок входящего списка)
   public Set<String> getDifferentNames(List<Person> persons) {
-    return getNames(persons).stream().distinct().collect(Collectors.toSet());
+    return new LinkedHashSet<>(getNames(persons));
   }
 
-  // Тут фронтовая логика, делаем за них работу - склеиваем ФИО
+  // Склеиваем ФИО, убираем лишние проверки
+  // Большой блок кода с опечаткой (person.secondName() - дважды) изменен на стрим - сразу видна логика, уменьшена вероятность ошибки
+  //
   public String convertPersonToString(Person person) {
-    String result = "";
-    if (person.secondName() != null) {
-      result += person.secondName();
-    }
-
-    if (person.firstName() != null) {
-      result += " " + person.firstName();
-    }
-
-    if (person.secondName() != null) {
-      result += " " + person.secondName();
-    }
-    return result;
+    return Stream.of(person.secondName(), person.firstName(), person.middleName())
+            .filter(Objects::nonNull)
+            .collect(Collectors.joining(" "));
   }
 
-  // словарь id персоны -> ее имя
+  // Создаем словарь id персоны -> ее имя
+  // Изначально map создаётся размером 1 - лучше сделать без указания начального размера
+  // Если придёт совпадающий id персоны код упадёт -> добавляем значение только в том случае, если в мапе ключа еще нет
   public Map<Integer, String> getPersonNames(Collection<Person> persons) {
-    Map<Integer, String> map = new HashMap<>(1);
+    Map<Integer, String> map = new HashMap<>();
     for (Person person : persons) {
-      if (!map.containsKey(person.id())) {
-        map.put(person.id(), convertPersonToString(person));
-      }
+      map.putIfAbsent(person.id(), convertPersonToString(person));
     }
     return map;
   }
 
-  // есть ли совпадающие в двух коллекциях персоны?
+  // Проверяем на совпадение персон в двух коллекциях
+  // Проверяем в стриме есть ли хоть одно совпадение элемента, и вернём соответствующее условие - асимптотика должна быть O(n+m) вместо O(n*m)
   public boolean hasSamePersons(Collection<Person> persons1, Collection<Person> persons2) {
-    boolean has = false;
-    for (Person person1 : persons1) {
-      for (Person person2 : persons2) {
-        if (person1.equals(person2)) {
-          has = true;
-        }
-      }
-    }
-    return has;
+    Set<Person> set1 = new HashSet<>(persons1);
+    return persons2.stream().anyMatch(set1::contains);
   }
 
   // Посчитать число четных чисел
+  //  Вместо переменной count и итерацию через forEach возвращаем результат вызова метода count()
   public long countEven(Stream<Integer> numbers) {
-    count = 0;
-    numbers.filter(num -> num % 2 == 0).forEach(num -> count++);
-    return count;
+    return numbers.filter(num -> num % 2 == 0).count();
   }
 
   // Загадка - объясните почему assert тут всегда верен
@@ -94,5 +84,15 @@ public class Task9 {
     Collections.shuffle(integers);
     Set<Integer> set = new HashSet<>(integers);
     assert snapshot.toString().equals(set.toString());
+
+    /*
+    Утверждение assert всегда верно благодаря особенностям работы HashSet и методу toString().
+    В списке snapshot находятся все числа от 1 до 10000 в исходном порядке.
+    В множестве set все элементы хранятся по бакетам, номер бакета определяется хэш функцией для каждого элемента
+    Но для целых чисел хэш-код является самим числом - поэтому они будут располагаться по возрастанию в самом HashSet независимо от порядка в котором добавлялись.
+    В итоге toString() пойдёт по бакетам и даст одинаковый результат как для упорядоченной коллекции так и для множества, т.к. они с целыми числами.
+
+    P.S. Проверил это дополнительно в тестах =)
+     */
   }
 }

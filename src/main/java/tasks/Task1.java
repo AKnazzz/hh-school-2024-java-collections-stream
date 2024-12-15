@@ -2,9 +2,11 @@ package tasks;
 
 import common.Person;
 import common.PersonService;
-import java.util.Collections;
+
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
+
+import static java.util.stream.Collectors.toMap;
 
 /*
 Задача 1
@@ -22,7 +24,19 @@ public class Task1 {
   }
 
   public List<Person> findOrderedPersons(List<Integer> personIds) {
-    Set<Person> persons = personService.findPersons(personIds);
-    return Collections.emptyList();
+
+    Map<Integer, Person> personsMap = personService.findPersons(personIds).stream()
+            .collect(toMap(Person::id, person -> person));
+
+    return personIds.stream()
+            .map(personsMap::get)
+            .toList();
   }
 }
+
+/*
+Оценка асимптотики:
+---> Создание Map: O(n)
+---> Итерация по personIds: O(n)
+---> Итоговая асимптотическая сложность будет: O(n).
+ */
