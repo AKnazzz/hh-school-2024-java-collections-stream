@@ -3,7 +3,6 @@ package tasks;
 import common.Area;
 import common.Person;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -20,26 +19,18 @@ public class Task6 {
   public static Set<String> getPersonDescriptions(Collection<Person> persons,
                                                   Map<Integer, Set<Integer>> personAreaIds,
                                                   Collection<Area> areas) {
-    Set<String> descriptions = new HashSet<>();
 
-    Map<Integer, String> areaIdToNameMap = areas.stream() // Создаем мапу для быстрого поиска региона по его ID
-            .collect(Collectors.toMap(Area::getId, Area::getName));
+    Map<Integer, Area> idToAreaMap = areas.stream()
+            .collect(Collectors.toMap(Area::getId, area -> area));
 
-    for (Person person : persons) {
-      Integer personId = person.id();
-      Set<Integer> areaIds = personAreaIds.get(personId);
-
-      if (areaIds != null) {
-        String personName = person.firstName();
-
-        for (Integer areaId : areaIds) {
-          String areaName = areaIdToNameMap.get(areaId);
-          if (areaName != null) {
-            descriptions.add(personName + " - " + areaName);
-          }
-        }
-      }
-    }
-    return descriptions;
+    return persons.stream()
+            .flatMap(person -> personAreaIds.get(person.id()).stream()
+                    .map(areaId -> formatDescription(person, idToAreaMap.get(areaId))))
+            .collect(Collectors.toSet());
   }
+
+  private static String formatDescription(Person person, Area area) {
+    return person.firstName() + " - " + area.getName();
+  }
+
 }

@@ -2,7 +2,16 @@ package tasks;
 
 import common.Person;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -15,83 +24,56 @@ P.P.S Здесь ваши правки необходимо прокоммент
  */
 public class Task9 {
 
-  // Удалено поле count, так как оно не нужно
-  // Можно использовать метод count() для подсчета четных чисел
-
+  // Удалено поле count, т.к. оно не нужно для подсчета четных чисел используем метод count()
   // Конвертируем начиная со второго элемента списка
-  /*
-  Удаление первого элемента с помощью persons.remove(0) изменяет исходный список, что может быть нежелательно.
-  Проверка на пустоту списка выполняется, но удаление элемента все равно происходит, если список не пуст.
-  Удаление элемента из начала списка неэффективно для больших списков.
-   */
+
+  // Вместо удаления элемента мы пропускаем элемент стриме. Это сохраняет исходный список неизменным и более эффективно.
+  // Удалил проверку на пустой список - тк если на входе пустой список по стрим вернёт пустой список + в данной проверке возвращается иммутабельный список,
+  //  а я предполагаю что с ним продолжится работа
   public List<String> getNames(List<Person> persons) {
-    if (persons == null || persons.isEmpty()) {   // изменено для улучшения читаемости
-      return Collections.emptyList();
-    }
     return persons.stream()
-            .skip(1) // Вместо удаления элемента мы пропускаем элемент в стриме. Это сохраняет исходный список неизменным и более эффективно.
+            .skip(1)
             .map(Person::firstName)
             .collect(Collectors.toList());
   }
 
   // Получаем уникальные имена персон без учета первого элемента
+  // На выходе должен быть Сет, дистинкт не нужен - делаем LinkedHashSet (+ сохраним порядок входящего списка)
   public Set<String> getDifferentNames(List<Person> persons) {
-    if (persons == null) {
-      throw new IllegalArgumentException("Список persons не должен быть null");
-    }
-    return getNames(persons).stream()
-            .filter(name -> name != null && !name.isEmpty()) // Фильтруем null и пустые строки
-            .collect(Collectors.toSet()); // Собираем в Set
+    return new LinkedHashSet<>(getNames(persons));
   }
 
   // Склеиваем ФИО, убираем лишние проверки
+  // Большой блок кода с опечаткой (person.secondName() - дважды) изменен на стрим - сразу видна логика, уменьшена вероятность ошибки
+  //
   public String convertPersonToString(Person person) {
-    if (person == null) {
-      return ""; // можно выбросить исключение, если это более уместно
-    }
-    return String.join(" ",
-            Optional.ofNullable(person.secondName()).orElse(""),
-            Optional.ofNullable(person.firstName()).orElse(""),
-            Optional.ofNullable(person.middleName()).orElse("") // ФИО
-    ).trim();
+    return Stream.of(person.secondName(), person.firstName(), person.middleName())
+            .filter(Objects::nonNull)
+            .collect(Collectors.joining(" "));
   }
 
   // Создаем словарь id персоны -> ее имя
-  /*
-    Преобразуем коллекцию в стрим, что позволяет использовать функциональные операции.
-    Убирает дубликаты, если это необходимо (если ожидаются дубликаты).
-    Создаем Map, где ключом является id человека, а значением — строковое представление ФИО Person.
-   */
+  // Изначально map создаётся размером 1 - лучше сделать без указания начального размера
+  // Если придёт совпадающий id персоны код упадёт -> добавляем значение только в том случае, если в мапе ключа еще нет
   public Map<Integer, String> getPersonNames(Collection<Person> persons) {
-    if (persons == null) {
-      throw new IllegalArgumentException("Collection не должна быть null");
+    Map<Integer, String> map = new HashMap<>();
+    for (Person person : persons) {
+      map.putIfAbsent(person.id(), convertPersonToString(person));
     }
-    return persons.stream()
-            .distinct() // если нужно убрать дубликаты по объектам Person
-            .collect(Collectors.toMap(Person::id, this::convertPersonToString
-            ));
+    return map;
   }
 
   // Проверяем на совпадение персон в двух коллекциях
+  // Проверяем в стриме есть ли хоть одно совпадение элемента, и вернём соответствующее условие - асимптотика должна быть O(n+m) вместо O(n*m)
   public boolean hasSamePersons(Collection<Person> persons1, Collection<Person> persons2) {
-    if (persons1 == null || persons2 == null) {
-      throw new IllegalArgumentException("Collections не должны быть null"); // можно вернуть false
-    }
-    Set<Person> set1 = new HashSet<>(persons1); // Создаем HashSet для первой коллекции
-    set1.retainAll(persons2); // Оставляем только те элементы, которые есть в persons2
-    return !set1.isEmpty(); // Если остались элементы, значит есть совпадения
+    Set<Person> set1 = new HashSet<>(persons1);
+    return persons2.stream().anyMatch(set1::contains);
   }
 
   // Посчитать число четных чисел
-  /*
-    Вместо переменной count и итерацию через forEach, сразу возвращаем результат вызова метода count(),
-    который подсчитывает количество элементов в потоке.
-   */
+  //  Вместо переменной count и итерацию через forEach возвращаем результат вызова метода count()
   public long countEven(Stream<Integer> numbers) {
-    if (numbers == null) {
-      throw new IllegalArgumentException("Stream must not be null");
-    }
-    return numbers.filter(num -> num % 2 == 0).count(); // Используем count() для подсчета
+    return numbers.filter(num -> num % 2 == 0).count();
   }
 
   // Загадка - объясните почему assert тут всегда верен
@@ -105,13 +87,12 @@ public class Task9 {
 
     /*
     Утверждение assert всегда верно благодаря особенностям работы HashSet и методу toString().
-    1. В списке snapshot находятся все числа от 1 до 10000 в исходном порядке.
-    2. В множестве set также есть все те же числа, но они могут быть в случайном порядке, так как для множества порядок не имеет значения.
-    3. Когда мы вызываем toString() на списке, он возвращает строку с элементами в том порядке, в котором они были добавлены: [1, 2, 3, ..., 10000].
-    4. Когда мы вызываем toString() на множестве, оно возвращает строку с элементами, отсортированными по возрастанию: [1, 2, 3, ..., 10000].
+    В списке snapshot находятся все числа от 1 до 10000 в исходном порядке.
+    В множестве set все элементы хранятся по бакетам, номер бакета определяется хэш функцией для каждого элемента
+    Но для целых чисел хэш-код является самим числом - поэтому они будут располагаться по возрастанию в самом HashSet независимо от порядка в котором добавлялись.
+    В итоге toString() пойдёт по бакетам и даст одинаковый результат как для упорядоченной коллекции так и для множества, т.к. они с целыми числами.
 
-    Таким образом, хотя порядок элементов в snapshot и set отличается, их содержимое одинаково.
-    Поэтому вызов метода toString() на обоих объектах вернет одну и ту же строку: все числа от 1 до 10000 в отсортированном виде.
+    P.S. Проверил это дополнительно в тестах =)
      */
   }
 }

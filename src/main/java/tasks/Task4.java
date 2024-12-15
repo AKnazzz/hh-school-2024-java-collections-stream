@@ -3,8 +3,8 @@ package tasks;
 import common.ApiPersonDto;
 import common.Person;
 import common.PersonConverter;
+
 import java.util.List;
-import java.util.stream.Collectors;
 
 /*
 Задача 4
@@ -22,12 +22,9 @@ public class Task4 {
   }
 
   public List<ApiPersonDto> convert(List<Person> persons) {
-    if (persons == null) {
-      throw new IllegalArgumentException("List<Person> не должен быть null.");
-    }
 
     return persons.stream()
             .map(personConverter::convert)
-            .collect(Collectors.toList());
+            .toList();
   }
 }

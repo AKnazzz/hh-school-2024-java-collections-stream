@@ -3,9 +3,9 @@ package tasks;
 import common.ApiPersonDto;
 import common.Person;
 import common.PersonConverter;
+
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /*
 Задача 5
@@ -23,22 +23,9 @@ public class Task5 {
   }
 
   public List<ApiPersonDto> convert(List<Person> persons, Map<Integer, Integer> personAreaIds) {
-    if (persons == null) {
-      throw new IllegalArgumentException("List<Person> не должен быть null.");
-    }
-    if (personAreaIds == null) {
-      throw new IllegalArgumentException("Map personAreaIds не должна быть null.");
-    }
 
     return persons.stream()
-            .map(person -> {
-              ApiPersonDto dto = personConverter.convert(person); // Person ---> ApiPersonDto
-              Integer areaId = personAreaIds.get(person.id()); // person.id ---> areaId
-              if (areaId != null) {
-                dto.setAreaId(areaId);
-              }
-              return dto;
-            })
-            .collect(Collectors.toList()); // Собираем результаты в список
+            .map(person -> personConverter.convert(person, personAreaIds.get(person.id())))
+            .toList();
   }
 }
